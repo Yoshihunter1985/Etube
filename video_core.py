@@ -23,6 +23,19 @@ CRF = "26"
 YTDLP = [sys.executable, "-m", "yt_dlp"]
 
 
+def get_duration(path):
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True, text=True, check=True,
+    )
+    return float(result.stdout.strip())
+
+
 def load_manifest():
     if MANIFEST.exists():
         return json.loads(MANIFEST.read_text())
@@ -86,10 +99,16 @@ def process_url(url, log=print):
         )
 
         log(f"[{vid_id}] thumbnail...")
+        try:
+            duration = get_duration(out_path)
+        except Exception:
+            duration = 10.0
+        thumb_time = min(max(duration * 0.15, 3), 20)
+
         subprocess.run(
             [
                 "ffmpeg", "-y", "-i", str(out_path),
-                "-ss", "00:00:02", "-vframes", "1",
+                "-ss", f"{thumb_time:.2f}", "-vframes", "1",
                 "-vf", "scale=320:-1",
                 str(thumb_path),
             ],
