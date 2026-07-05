@@ -1,11 +1,12 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-add_video.py — paste a YouTube URL, get a compressed mp4 + thumbnail dropped
+add_video.py - paste a YouTube URL, get a compressed mp4 + thumbnail dropped
 into this project, and videos.json updated automatically.
 
 Requires (one-time setup):
     pip install yt-dlp
     ffmpeg installed and on your PATH (winget install ffmpeg, or from ffmpeg.org)
+    deno installed and on your PATH (winget install DenoLand.Deno)
 
 Usage:
     python add_video.py https://www.youtube.com/watch?v=XXXXXXXX
@@ -22,12 +23,9 @@ VIDEOS_DIR = ROOT / "videos"
 THUMBS_DIR = ROOT / "thumbs"
 MANIFEST = ROOT / "videos.json"
 
-# Cycle through these so consecutive additions don't all look the same
 COLORS = ["#FF6B6B", "#4ECDC4", "#FFD93D", "#95E06C", "#B185DB"]
 SHAPES = ["sun", "star", "flower", "heart", "rocket"]
 
-# Target format — matches what index.html expects. Keep in sync with the
-# settings described in README.md if you change these.
 SCALE = "854:480"
 CRF = "26"
 
@@ -65,9 +63,13 @@ def main():
     out_path = VIDEOS_DIR / f"{vid_id}.mp4"
     thumb_path = THUMBS_DIR / f"{vid_id}.jpg"
 
+    YTDLP = [sys.executable, "-m", "yt_dlp"]
+
     print(f"[1/4] Downloading -> {raw_path.name}")
     run([
-        "yt-dlp",
+        *YTDLP,
+        "--remote-components", "ejs:github",
+        "--no-playlist",
         "-f", "bv*[height<=720]+ba/b[height<=720]",
         "--merge-output-format", "mp4",
         "-o", str(raw_path),
@@ -76,7 +78,7 @@ def main():
 
     print("[2/4] Reading title")
     title_result = subprocess.run(
-        ["yt-dlp", "--get-title", url],
+        [*YTDLP, "--no-playlist", "--get-title", url],
         check=True, capture_output=True, text=True,
     )
     title = title_result.stdout.strip() or vid_id
@@ -113,7 +115,7 @@ def main():
     })
     save_manifest(manifest)
 
-    print(f"\nDone. Added '{title}' as {vid_id}.")
+    print(f"\nDone. Added {title} as {vid_id}.")
     print(f"  video:  videos/{vid_id}.mp4")
     print(f"  thumb:  thumbs/{vid_id}.jpg")
     print(f"  videos.json updated ({len(manifest)} total)")
