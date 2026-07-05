@@ -86,6 +86,25 @@
   .play-badge.show { opacity: 1; transform: scale(1); }
   .play-badge svg { width: 46px; height: 46px; }
 
+  .loading-spinner {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .loading-spinner.show { display: flex; }
+  .loading-spinner .ring {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 6px solid rgba(255,255,255,0.25);
+    border-top-color: rgba(255,255,255,0.9);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   .empty-state {
     position: absolute;
     inset: 0;
@@ -147,6 +166,7 @@
 
   <div class="stage" id="stage">
     <video id="player" playsinline webkit-playsinline loop></video>
+    <div class="loading-spinner" id="loadingSpinner"><div class="ring"></div></div>
     <div class="stage-tap-layer" id="tapLayer">
       <div class="play-badge" id="playBadge">
         <svg viewBox="0 0 24 24" fill="#3A3A3A"><path d="M8 5v14l11-7z"/></svg>
@@ -177,6 +197,7 @@
   const tapLayer = document.getElementById('tapLayer');
   const playBadge = document.getElementById('playBadge');
   const emptyState = document.getElementById('emptyState');
+  const loadingSpinner = document.getElementById('loadingSpinner');
 
   let videos = [];
   let currentId = null;
@@ -206,8 +227,12 @@
     const v = videos.find(x => x.id === id);
     if (!v) return;
     currentId = id;
+    if (v.thumb) {
+      player.poster = v.thumb;
+    }
     if (player.src !== v.src) {
       player.src = v.src;
+      loadingSpinner.classList.add('show');
     }
     if (autoplay) {
       player.play().catch(() => { /* needs a tap; that's fine, tap already happened */ });
@@ -229,6 +254,15 @@
   });
   player.addEventListener('pause', () => {
     playBadge.classList.add('show');
+  });
+  player.addEventListener('waiting', () => {
+    loadingSpinner.classList.add('show');
+  });
+  player.addEventListener('playing', () => {
+    loadingSpinner.classList.remove('show');
+  });
+  player.addEventListener('canplay', () => {
+    loadingSpinner.classList.remove('show');
   });
 
   // Block long-press context menu on the video (save/share sheet)
