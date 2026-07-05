@@ -18,7 +18,7 @@ COLORS = ["#FF6B6B", "#4ECDC4", "#FFD93D", "#95E06C", "#B185DB"]
 SHAPES = ["sun", "star", "flower", "heart", "rocket"]
 
 SCALE = "854:480"
-CRF = "26"
+CRF = "29"
 
 YTDLP = [sys.executable, "-m", "yt_dlp"]
 
