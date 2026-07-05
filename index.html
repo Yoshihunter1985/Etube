@@ -249,11 +249,40 @@
     }
   });
 
+  let wakeLock = null;
+
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {
+      // Not fatal - just means the screen may sleep during playback.
+      // Common causes: unsupported browser/OS version, or low battery mode.
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) {
+      wakeLock.release();
+      wakeLock = null;
+    }
+  }
+
+  // iOS releases the wake lock whenever the tab/app is backgrounded, so
+  // re-request it when coming back if a video is still supposed to be playing.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !player.paused) {
+      requestWakeLock();
+    }
+  });
+
   player.addEventListener('play', () => {
     playBadge.classList.remove('show');
+    requestWakeLock();
   });
   player.addEventListener('pause', () => {
     playBadge.classList.add('show');
+    releaseWakeLock();
   });
   player.addEventListener('waiting', () => {
     loadingSpinner.classList.add('show');
