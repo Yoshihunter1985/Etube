@@ -23,7 +23,7 @@ pip install yt-dlp
 Also install ffmpeg and make sure it's on your PATH — easiest on Windows is
 `winget install ffmpeg`, or download from ffmpeg.org.
 
-## 3. Adding a video — the easy way
+## 3. Adding a video — the easy way (one at a time)
 Double-click `add_and_publish.bat`, paste a YouTube URL when prompted, hit enter.
 It will:
 1. Download the video (capped at 720p source, no point pulling 4K just to shrink it)
@@ -49,6 +49,38 @@ ffmpeg -i source.mp4 -vf "scale=854:480" -c:v libx264 -crf 26 -preset veryfast \
 - `-crf 26` → good quality/size tradeoff; raise to ~28–30 in `add_video.py` if you
   want files smaller
 - Rough output size: **~5–10 MB per minute** of video at these settings
+
+## 3b. Adding many videos at once — the batch studio
+
+For sitting down and curating a bunch of videos in one go: paste a list of
+URLs into a local web page, hit Start, let it churn through the whole list,
+then hit one Push button at the end.
+
+One-time setup (in addition to yt-dlp/ffmpeg/deno from above):
+```powershell
+pip install flask
+```
+
+To run it:
+```powershell
+run_studio.bat
+```
+This opens `http://localhost:5050` in your browser (it only runs on your own
+machine — nothing here is exposed to the internet). Paste one YouTube URL
+per line into the box, hit **Start**. Each one gets downloaded, compressed,
+thumbnailed, and added to `videos.json` in sequence — you can leave it
+running and walk away. Each line shows a status dot (waiting / working /
+done / failed) so you can see progress at a glance.
+
+Once everything's finished, the **Push to GitHub** button lights up. Hit it
+once and it commits and pushes everything from that whole session in a
+single go.
+
+If a particular URL fails (private video, region-locked, playlist link,
+etc.), it won't stop the rest of the batch — that one just shows as failed
+and everything else keeps going.
+
+Close the `run_studio.bat` window when you're done for the session.
 
 ## 4. Where the video files live
 
