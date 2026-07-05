@@ -1,0 +1,37 @@
+[
+  {
+    "id": "demo-1",
+    "title": "Bunny",
+    "color": "#FF6B6B",
+    "shape": "sun",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    "id": "demo-2",
+    "title": "Dream",
+    "color": "#4ECDC4",
+    "shape": "star",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
+  },
+  {
+    "id": "demo-3",
+    "title": "Blaze",
+    "color": "#FFD93D",
+    "shape": "flower",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+  },
+  {
+    "id": "demo-4",
+    "title": "Fun",
+    "color": "#95E06C",
+    "shape": "heart",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
+  },
+  {
+    "id": "demo-5",
+    "title": "Joy",
+    "color": "#B185DB",
+    "shape": "rocket",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"
+  }
+]

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
+<!-- iOS "Add to Home Screen" kiosk mode: opens full-screen, no Safari address bar -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Watch</title>
+
+<style>
+  :root{
+    --cream: #FFF8EC;
+    --ink: #3A3A3A;
+    --coral: #FF6B6B;
+    --teal: #4ECDC4;
+    --sun: #FFD93D;
+    --grass: #95E06C;
+    --grape: #B185DB;
+    --tile-radius: 28px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--cream);
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    /* stop the toddler from selecting text, saving images, or triggering callouts */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body {
+    display: flex;
+    height: 100vh;
+    height: 100dvh;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  /* ---------- LEFT: main stage ---------- */
+  .stage {
+    flex: 1 1 68%;
+    position: relative;
+    background: #111;
+    border-radius: var(--tile-radius);
+    overflow: hidden;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.08);
+  }
+
+  .stage video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #111;
+  }
+
+  .stage-tap-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .play-badge {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+  }
+  .play-badge.show { opacity: 1; transform: scale(1); }
+  .play-badge svg { width: 46px; height: 46px; }
+
+  .empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 20px;
+  }
+
+  /* ---------- RIGHT: carousel ---------- */
+  .rail {
+    flex: 0 0 29%;
+    max-width: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-snap-type: y proximity;
+    padding-right: 2px;
+  }
+  .rail::-webkit-scrollbar { width: 0; height: 0; }
+
+  .tile {
+    position: relative;
+    flex: 0 0 auto;
+    height: 130px;
+    border-radius: var(--tile-radius);
+    border: 6px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    scroll-snap-align: start;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    overflow: hidden;
+  }
+
+  .tile:active { transform: scale(0.94); }
+
+  .tile.selected {
+    border-color: #fff;
+    box-shadow: 0 0 0 5px var(--tile-color, var(--coral));
+    transform: scale(1.04);
+  }
+
+  .tile svg { width: 56px; height: 56px; }
+
+  .tile .thumb-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>
+</head>
+<body>
+
+  <div class="stage" id="stage">
+    <video id="player" playsinline webkit-playsinline muted="false" loop></video>
+    <div class="stage-tap-layer" id="tapLayer">
+      <div class="play-badge" id="playBadge">
+        <svg viewBox="0 0 24 24" fill="#3A3A3A"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+    </div>
+    <div class="empty-state" id="emptyState">loading&hellip;</div>
+  </div>
+
+  <div class="rail" id="rail"></div>
+
+<script>
+  // ------------------------------------------------------------------
+  // Simple colorful placeholder icons, used only until you supply real
+  // thumbnail images. Add a "thumb": "thumbs/xyz.jpg" field per video in
+  // videos.json to use a real image instead of a shape.
+  // ------------------------------------------------------------------
+  const SHAPES = {
+    sun: '<circle cx="12" cy="12" r="5"/><g stroke-width="2" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/></g>',
+    star: '<path d="M12 2l2.9 6.9L22 9.7l-5.5 4.8L18 22l-6-4-6 4 1.5-7.5L2 9.7l7.1-.8z"/>',
+    flower: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="5" r="3"/><circle cx="12" cy="19" r="3"/><circle cx="5" cy="12" r="3"/><circle cx="19" cy="12" r="3"/>',
+    heart: '<path d="M12 21s-7.5-4.6-10-9.3C0.3 8 2 4 6 4c2.2 0 3.8 1.2 6 3.4C14.2 5.2 15.8 4 18 4c4 0 5.7 4 4 7.7C19.5 16.4 12 21 12 21z"/>',
+    rocket: '<path d="M12 2c3 2 4 6 4 10l-4 4-4-4c0-4 1-8 4-10z"/><circle cx="12" cy="9" r="1.6" fill="var(--cream)"/><path d="M8 15l-3 5 5-2M16 15l3 5-5-2"/>'
+  };
+
+  const player = document.getElementById('player');
+  const rail = document.getElementById('rail');
+  const stage = document.getElementById('stage');
+  const tapLayer = document.getElementById('tapLayer');
+  const playBadge = document.getElementById('playBadge');
+  const emptyState = document.getElementById('emptyState');
+
+  let videos = [];
+  let currentId = null;
+
+  function tileMarkup(v){
+    if (v.thumb){
+      return `<img class="thumb-img" src="${v.thumb}" alt="">`;
+    }
+    const shape = SHAPES[v.shape] || SHAPES.star;
+    return `<svg viewBox="0 0 24 24" fill="${v.color}" style="color:${v.color}">${shape}</svg>`;
+  }
+
+  function render(){
+    rail.innerHTML = '';
+    videos.forEach(v => {
+      const tile = document.createElement('div');
+      tile.className = 'tile' + (v.id === currentId ? ' selected' : '');
+      tile.style.background = v.thumb ? '#000' : (v.color + '22');
+      tile.style.setProperty('--tile-color', v.color);
+      tile.innerHTML = tileMarkup(v);
+      tile.addEventListener('click', () => selectVideo(v.id, true));
+      rail.appendChild(tile);
+    });
+  }
+
+  function selectVideo(id, autoplay){
+    const v = videos.find(x => x.id === id);
+    if (!v) return;
+    currentId = id;
+    if (player.src !== v.src) {
+      player.src = v.src;
+    }
+    if (autoplay) {
+      player.play().catch(() => { /* needs a tap; that's fine, tap already happened */ });
+    }
+    render();
+  }
+
+  // Tap the video itself to toggle play/pause (no native controls exposed)
+  tapLayer.addEventListener('click', () => {
+    if (player.paused) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  });
+
+  player.addEventListener('play', () => {
+    playBadge.classList.remove('show');
+  });
+  player.addEventListener('pause', () => {
+    playBadge.classList.add('show');
+  });
+
+  // Block long-press context menu on the video (save/share sheet)
+  player.addEventListener('contextmenu', e => e.preventDefault());
+
+  async function init(){
+    try {
+      const res = await fetch('videos.json', { cache: 'no-store' });
+      videos = await res.json();
+    } catch (e) {
+      emptyState.textContent = 'Could not load videos.json';
+      return;
+    }
+    if (!videos.length){
+      emptyState.textContent = 'No videos yet — add some to videos.json';
+      return;
+    }
+    emptyState.style.display = 'none';
+    selectVideo(videos[0].id, false);
+    playBadge.classList.add('show');
+  }
+
+  init();
+</script>
+</body>
+</html>
